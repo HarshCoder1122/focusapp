@@ -1,0 +1,125 @@
+{
+  "identity": {
+    "name": "RevealIQ Study Companion",
+    "persona": "E1: The Anti-AI Designer",
+    "aesthetic": "Cyber-Scholar (Electric & Neon + Soft Utility)",
+    "core_philosophy": "Study is a game you win. Focus is the currency."
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Outfit",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
+    },
+    "weights": {
+      "heading": "font-bold tracking-tight",
+      "subheading": "font-medium tracking-normal",
+      "body": "font-normal leading-relaxed"
+    },
+    "installation": "Import from Google Fonts in index.css: @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Outfit:wght@400;500;700;900&display=swap');"
+  },
+  "colors": {
+    "palette_strategy": "Archetype 2: Electric & Neon (Dark Mode) vs Archetype 4: Swiss High-Contrast (Light Mode)",
+    "light_theme": {
+      "background": "#FFFFFF",
+      "foreground": "#0F172A",
+      "primary": "#4F46E5",
+      "secondary": "#F1F5F9",
+      "accent": "#F59E0B",
+      "muted": "#94A3B8",
+      "border": "#E2E8F0"
+    },
+    "dark_theme": {
+      "background": "#09090B",
+      "foreground": "#F8FAFC",
+      "primary": "#818CF8",
+      "secondary": "#1E293B",
+      "accent": "#FBBF24",
+      "muted": "#64748B",
+      "border": "#27272A"
+    },
+    "special_colors": {
+      "coin_gold": "#FFD700",
+      "success_green": "#10B981",
+      "error_red": "#EF4444",
+      "focus_purple": "#7C3AED"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl",
+    "neon_glow": "shadow-[0_0_20px_rgba(124,58,237,0.5)]",
+    "gradients": {
+      "hero": "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500",
+      "coin": "bg-gradient-to-b from-yellow-300 to-yellow-600"
+    },
+    "textures": "Use subtle noise overlay on dark backgrounds to prevent banding."
+  },
+  "layout": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "spacing": {
+      "section_gap": "py-24",
+      "element_gap": "gap-6"
+    },
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+      "bento_hero": "col-span-full md:col-span-2 row-span-2",
+      "bento_stat": "col-span-1 row-span-1"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "rounded-full px-8 py-3 font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-indigo-500/25",
+      "secondary": "rounded-full px-8 py-3 font-medium border-2 border-border hover:bg-secondary transition-colors"
+    },
+    "cards": {
+      "base": "rounded-2xl border border-border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-300",
+      "glass": "rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md"
+    },
+    "inputs": {
+      "style": "rounded-xl border-2 border-border bg-background px-4 py-3 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+    }
+  },
+  "motion": {
+    "library": "framer-motion",
+    "transitions": {
+      "default": { "type": "spring", "stiffness": 300, "damping": 30 },
+      "hover": { "duration": 0.2 }
+    },
+    "micro_interactions": "Buttons scale on click. Cards lift on hover. Coins spin when earned."
+  },
+  "image_urls": {
+    "landing_hero": {
+      "url": "https://images.pexels.com/photos/9159088/pexels-photo-9159088.jpeg",
+      "alt": "Student deeply focused on laptop in a library setting",
+      "category": "hero"
+    },
+    "wallet_header": {
+      "url": "https://images.unsplash.com/photo-1624365166419-d5d56ee31817?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHw0fHwzZCUyMGdvbGQlMjBjb2luJTIwZmxvYXRpbmclMjBnYW1lJTIwYXNzZXR8ZW58MHx8fHwxNzY2NDg3NjAwfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Pile of gold coins representing wealth and rewards",
+      "category": "background"
+    },
+    "leaderboard_bg": {
+      "url": "https://images.unsplash.com/photo-1693763824929-bd6b4b959e2b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwzfHxmdXR1cmlzdGljJTIwdHJvcGh5JTIwYWNoaWV2ZW1lbnQlMjBpY29uJTIwM2R8ZW58MHx8fHwxNzY2NDg3NjAyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract podium background for achievements",
+      "category": "background"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use .jsx extension for all React components.",
+    "Implement the 'Outfit' font for all headings to give a distinct brand feel.",
+    "Use 'JetBrains Mono' specifically for the Focus Timer countdown to make it look technical.",
+    "The 'Focus Timer' must have a 'Zen Mode' that hides all other UI elements.",
+    "Implement a 'Streak Flame' icon that changes color based on streak length (Orange -> Red -> Purple).",
+    "Use the 'sonner' library for toast notifications (e.g., 'You earned 50 coins!').",
+    "Ensure the Theme Toggle is prominent in the Profile section.",
+    "For the Dashboard, use a Bento Grid layout: Large block for 'Weekly Focus', medium for 'Coins', small for 'Streak'.",
+    "Anti-Cheat: Listen for 'visibilitychange' events. If document.hidden is true, pause the timer and show a warning modal on return."
+  ],
+  "universal_guidelines": [
+    "Do not use generic gradients. Use noise textures or sharp borders.",
+    "Avoid 'Inter' for headings. Use 'Outfit'.",
+    "Make sure all interactive elements have data-testid attributes.",
+    "Use 'lucide-react' for icons.",
+    "Ensure mobile responsiveness is the priority (PWA)."
+  ]
+}
