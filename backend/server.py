@@ -338,26 +338,46 @@ async def google_oauth_callback(data: GoogleCallbackData, response: Response):
         
         print(f"OAuth user verified: {user_email}")
         
-        # Check if user profile exists
+        # Check if user profile exists by user_id OR email
         profile_response = get_supabase().table("users").select("*").eq("user_id", user_id).execute()
         
         if profile_response.data and len(profile_response.data) > 0:
             user_profile = profile_response.data[0]
         else:
-            # Create new user profile for OAuth user
-            user_doc = {
-                "user_id": user_id,
-                "email": user_email,
-                "name": user_name,
-                "coins": 0,
-                "current_streak": 0,
-                "total_study_time": 0,
-                "onboarding_completed": False,
-                "daily_target_minutes": 120,
-                "theme": "dark"
-            }
-            get_supabase().table("users").insert(user_doc).execute()
-            user_profile = user_doc
+            # Check by email - user might exist from previous email/password registration
+            email_profile_response = get_supabase().table("users").select("*").eq("email", user_email).execute()
+            
+            if email_profile_response.data and len(email_profile_response.data) > 0:
+                # User exists with same email - just use that profile (don't try to update user_id)
+                user_profile = email_profile_response.data[0]
+                print(f"Found existing user by email: {user_email}")
+            else:
+                # Create new user profile for OAuth user using upsert to handle race conditions
+                user_doc = {
+                    "user_id": user_id,
+                    "email": user_email,
+                    "name": user_name,
+                    "coins": 0,
+                    "current_streak": 0,
+                    "total_study_time": 0,
+                    "onboarding_completed": False,
+                    "daily_target_minutes": 120,
+                    "theme": "dark"
+                }
+                try:
+                    get_supabase().table("users").upsert(user_doc, on_conflict="email").execute()
+                except Exception as insert_error:
+                    print(f"Upsert error (likely race condition), retrying fetch: {insert_error}")
+                    # If upsert fails, just fetch by email
+                    email_profile_response = get_supabase().table("users").select("*").eq("email", user_email).execute()
+                    if email_profile_response.data:
+                        user_profile = email_profile_response.data[0]
+                    else:
+                        raise insert_error
+                else:
+                    # Fetch the profile after upsert to get complete data
+                    final_response = get_supabase().table("users").select("*").eq("email", user_email).execute()
+                    user_profile = final_response.data[0] if final_response.data else user_doc
         
         # Set auth cookie
         response.set_cookie(
