@@ -10,15 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, GraduationCap, Clock, ChevronRight, Sun, Moon } from "lucide-react";
+import { BookOpen, GraduationCap, Clock, ChevronRight, Sun, Moon, Plus, X } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
+import { Input } from "@/components/ui/input";
 
 const OnboardingPage = ({ user, setUser }) => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     class_level: "",
     subjects: [],
@@ -36,7 +37,7 @@ const OnboardingPage = ({ user, setUser }) => {
   ];
 
   const subjectOptions = [
-    "Mathematics", "Physics", "Chemistry", "Biology", 
+    "Mathematics", "Physics", "Chemistry", "Biology",
     "English", "History", "Geography", "Computer Science",
     "Economics", "Accounts", "Business Studies", "Hindi",
     "Political Science", "Psychology", "Sociology"
@@ -48,6 +49,33 @@ const OnboardingPage = ({ user, setUser }) => {
       subjects: prev.subjects.includes(subject)
         ? prev.subjects.filter(s => s !== subject)
         : [...prev.subjects, subject]
+    }));
+  };
+
+  // Custom subject functionality
+  const [customSubject, setCustomSubject] = useState("");
+  const [customSubjects, setCustomSubjects] = useState([]);
+
+  const addCustomSubject = () => {
+    const trimmed = customSubject.trim();
+    if (trimmed && !subjectOptions.includes(trimmed) && !customSubjects.includes(trimmed)) {
+      setCustomSubjects(prev => [...prev, trimmed]);
+      setFormData(prev => ({
+        ...prev,
+        subjects: [...prev.subjects, trimmed]
+      }));
+      setCustomSubject("");
+      toast.success(`Added "${trimmed}" to your subjects`);
+    } else if (subjectOptions.includes(trimmed) || customSubjects.includes(trimmed)) {
+      toast.error("Subject already exists");
+    }
+  };
+
+  const removeCustomSubject = (subject) => {
+    setCustomSubjects(prev => prev.filter(s => s !== subject));
+    setFormData(prev => ({
+      ...prev,
+      subjects: prev.subjects.filter(s => s !== subject)
     }));
   };
 
@@ -63,7 +91,7 @@ const OnboardingPage = ({ user, setUser }) => {
         ...formData,
         theme: theme
       });
-      
+
       if (response.data) {
         setUser(response.data);
         toast.success("Profile setup complete!");
@@ -91,7 +119,7 @@ const OnboardingPage = ({ user, setUser }) => {
               <h2 className="text-2xl font-bold">What's your class?</h2>
               <p className="text-muted-foreground">Help us personalize your experience</p>
             </div>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {classOptions.map((option) => (
                 <Button
@@ -132,15 +160,14 @@ const OnboardingPage = ({ user, setUser }) => {
               <p className="text-muted-foreground">Choose subjects you want to track</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-3 max-h-[250px] overflow-y-auto pr-2">
               {subjectOptions.map((subject) => (
                 <div
                   key={subject}
-                  className={`flex items-center space-x-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                    formData.subjects.includes(subject)
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                  className={`flex items-center space-x-3 p-3 rounded-xl border cursor-pointer transition-all ${formData.subjects.includes(subject)
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/50"
+                    }`}
                   onClick={() => toggleSubject(subject)}
                   data-testid={`subject-${subject.toLowerCase().replace(/\s+/g, "-")}-btn`}
                 >
@@ -151,6 +178,48 @@ const OnboardingPage = ({ user, setUser }) => {
                   <span className="text-sm font-medium">{subject}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Custom Subjects Display */}
+            {customSubjects.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {customSubjects.map((subject) => (
+                  <div
+                    key={subject}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary text-sm"
+                  >
+                    <span>{subject}</span>
+                    <button
+                      onClick={() => removeCustomSubject(subject)}
+                      className="hover:text-destructive transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Custom Subject */}
+            <div className="flex gap-2 mt-3">
+              <Input
+                placeholder="Add custom subject (e.g., Data Structures)"
+                value={customSubject}
+                onChange={(e) => setCustomSubject(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCustomSubject()}
+                className="flex-1"
+                data-testid="custom-subject-input"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={addCustomSubject}
+                disabled={!customSubject.trim()}
+                data-testid="add-custom-subject-btn"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
 
             <div className="flex gap-4">
@@ -199,7 +268,7 @@ const OnboardingPage = ({ user, setUser }) => {
                   </>
                 )}
               </div>
-              
+
               <Slider
                 value={[formData.daily_target_minutes]}
                 onValueChange={([value]) => setFormData({ ...formData, daily_target_minutes: value })}
@@ -209,7 +278,7 @@ const OnboardingPage = ({ user, setUser }) => {
                 className="w-full"
                 data-testid="daily-target-slider"
               />
-              
+
               <div className="flex justify-between text-sm text-muted-foreground mt-2">
                 <span>30 min</span>
                 <span>8 hours</span>
@@ -271,9 +340,8 @@ const OnboardingPage = ({ user, setUser }) => {
           {[1, 2, 3].map((s) => (
             <div
               key={s}
-              className={`h-2 rounded-full transition-all ${
-                s === step ? "w-8 bg-primary" : s < step ? "w-4 bg-primary/50" : "w-4 bg-border"
-              }`}
+              className={`h-2 rounded-full transition-all ${s === step ? "w-8 bg-primary" : s < step ? "w-4 bg-primary/50" : "w-4 bg-border"
+                }`}
             />
           ))}
         </div>
