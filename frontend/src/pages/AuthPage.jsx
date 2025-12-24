@@ -17,9 +17,14 @@ const AuthPage = () => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({ name: "", email: "", password: "" });
 
-  // Placeholder for future Supabase Google Auth
+  // Supabase Google OAuth
   const handleGoogleAuth = () => {
-    toast.info("Please sign up with email/password. Google Auth requires additional Supabase setup.");
+    setIsLoading(true);
+    const supabaseUrl = "https://vcsmygacidtdyvpzdgtn.supabase.co";
+    const redirectTo = window.location.origin; // Redirect back to the app after auth
+
+    // Redirect to Supabase OAuth endpoint
+    window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
   };
 
   const handleLogin = async (e) => {

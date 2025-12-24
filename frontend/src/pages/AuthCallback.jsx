@@ -14,32 +14,50 @@ const AuthCallback = () => {
 
     const processSession = async () => {
       try {
-        // Extract session_id from URL fragment
-        const hash = window.location.hash;
-        const sessionIdMatch = hash.match(/session_id=([^&]+)/);
-        
-        if (!sessionIdMatch) {
+        // Extract tokens from URL fragment (Supabase OAuth returns these)
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+
+        // Legacy support for session_id
+        const sessionId = params.get("session_id");
+
+        if (!accessToken && !sessionId) {
+          console.error("No access token or session_id found in callback");
           navigate("/auth");
           return;
         }
 
-        const sessionId = sessionIdMatch[1];
+        let response;
 
-        // Exchange session_id for user data
-        const response = await axios.post(`${API}/auth/google/session`, {
-          session_id: sessionId
-        });
+        if (accessToken) {
+          // Handle Supabase OAuth callback with access_token
+          response = await axios.post(`${API}/auth/google/callback`, {
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+        } else if (sessionId) {
+          // Legacy session_id handling
+          response = await axios.post(`${API}/auth/google/session`, {
+            session_id: sessionId
+          });
+        }
 
-        if (response.data.user) {
+        if (response?.data?.user) {
           // Clear the hash from URL
           window.history.replaceState(null, "", window.location.pathname);
-          
+
           // Navigate based on onboarding status
           if (response.data.user.onboarding_completed) {
             navigate("/dashboard", { state: { user: response.data.user }, replace: true });
           } else {
             navigate("/onboarding", { state: { user: response.data.user }, replace: true });
           }
+        } else {
+          console.error("No user data in response");
+          navigate("/auth");
         }
       } catch (error) {
         console.error("Auth callback error:", error);

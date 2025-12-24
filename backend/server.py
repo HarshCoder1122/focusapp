@@ -280,6 +280,62 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(key="sb_access_token", path="/")
     return {"message": "Logged out successfully"}
 
+# Google OAuth callback - verify access token and return user
+class GoogleCallbackData(BaseModel):
+    access_token: str
+    refresh_token: Optional[str] = None
+
+@api_router.post("/auth/google/callback")
+async def google_oauth_callback(data: GoogleCallbackData, response: Response):
+    try:
+        # Verify the access token with Supabase
+        user_response = get_supabase().auth.get_user(data.access_token)
+        
+        if not user_response.user:
+            raise HTTPException(status_code=401, detail="Invalid access token")
+        
+        user_id = user_response.user.id
+        user_email = user_response.user.email
+        user_name = user_response.user.user_metadata.get("full_name") or user_response.user.user_metadata.get("name") or "Student"
+        
+        # Check if user profile exists
+        profile_response = get_supabase().table("users").select("*").eq("user_id", user_id).execute()
+        
+        if profile_response.data and len(profile_response.data) > 0:
+            user_profile = profile_response.data[0]
+        else:
+            # Create new user profile for OAuth user
+            user_doc = {
+                "user_id": user_id,
+                "email": user_email,
+                "name": user_name,
+                "coins": 0,
+                "current_streak": 0,
+                "total_study_time": 0,
+                "onboarding_completed": False,
+                "daily_target_minutes": 120,
+                "theme": "dark"
+            }
+            get_supabase().table("users").insert(user_doc).execute()
+            user_profile = user_doc
+        
+        # Set auth cookie
+        response.set_cookie(
+            key="sb_access_token",
+            value=data.access_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=3600 * 24 * 7,
+            path="/"
+        )
+        
+        return {"user": user_profile, "token": data.access_token}
+        
+    except Exception as e:
+        print(f"Google OAuth callback error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 # ==================== ONBOARDING ====================
 
 @api_router.post("/onboarding")
