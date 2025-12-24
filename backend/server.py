@@ -136,12 +136,13 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     try:
-        # Verify token with Supabase
-        user_response = get_supabase().auth.get_user(token)
+        # Verify token with Supabase using ANON client (tokens are signed for anon key)
+        user_response = get_supabase_anon().auth.get_user(token)
         if not user_response.user:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         user_id = user_response.user.id
+        user_email = user_response.user.email
         
         # Fetch detailed user profile from 'users' table
         profile_response = get_supabase().table("users").select("*").eq("user_id", user_id).single().execute()
@@ -149,9 +150,15 @@ async def get_current_user(request: Request) -> dict:
         if profile_response.data:
             return profile_response.data
         else:
-            # Should not happen if triggers are set up, but let's handle it
+            # User might have different user_id (OAuth vs email/password) - try by email
+            if user_email:
+                email_profile = get_supabase().table("users").select("*").eq("email", user_email).single().execute()
+                if email_profile.data:
+                    return email_profile.data
             raise HTTPException(status_code=404, detail="User profile not found")
             
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Auth error: {e}")
         raise HTTPException(status_code=401, detail="Session expired or invalid")
