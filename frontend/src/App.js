@@ -16,7 +16,7 @@ import WalletPage from "@/pages/WalletPage";
 import ProfilePage from "@/pages/ProfilePage";
 import AuthCallback from "@/pages/AuthCallback";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 export const API = `${BACKEND_URL}/api`;
 
 // Configure axios defaults

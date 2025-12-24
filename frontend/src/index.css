@@ -26,7 +26,7 @@
   --input: 214 32% 91%;
   --ring: 239 84% 67%;
   --radius: 0.75rem;
-  
+
   /* Special Colors */
   --coin-gold: 51 100% 50%;
   --success: 160 84% 39%;
@@ -66,7 +66,53 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/* Global smooth color transitions */
+*,
+*::before,
+*::after {
+  transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Faster transitions for interactive elements */
+button,
+a,
+[role="button"],
+.btn-primary,
+.card-hover {
+  transition-duration: 150ms;
+}
+
+/* SVG icon color transitions */
+svg,
+svg path,
+svg circle,
+svg rect,
+svg line,
+svg polyline,
+svg polygon {
+  transition: color 200ms ease, fill 200ms ease, stroke 200ms ease, transform 300ms ease;
+}
+
+/* Lucide icons specific transitions */
+.lucide,
+[data-lucide] {
+  transition: color 200ms ease, transform 200ms ease;
+}
+
+/* Smooth theme transitions */
+.dark,
+:root {
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: 'Outfit', sans-serif;
 }
 
@@ -114,19 +160,24 @@ h1, h2, h3, h4, h5, h6 {
 /* Neon glow effects */
 .neon-purple {
   box-shadow: 0 0 20px rgba(124, 58, 237, 0.5),
-              0 0 40px rgba(124, 58, 237, 0.3),
-              0 0 60px rgba(124, 58, 237, 0.1);
+    0 0 40px rgba(124, 58, 237, 0.3),
+    0 0 60px rgba(124, 58, 237, 0.1);
 }
 
 .neon-gold {
   box-shadow: 0 0 20px rgba(255, 215, 0, 0.5),
-              0 0 40px rgba(255, 215, 0, 0.3);
+    0 0 40px rgba(255, 215, 0, 0.3);
 }
 
 /* Coin animation */
 @keyframes coin-spin {
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
+  0% {
+    transform: rotateY(0deg);
+  }
+
+  100% {
+    transform: rotateY(360deg);
+  }
 }
 
 .coin-spin {
@@ -135,8 +186,15 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Pulse glow animation */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.5); }
-  50% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.8); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.8);
+  }
 }
 
 .pulse-glow {
@@ -144,9 +202,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Streak flame colors */
-.flame-orange { color: #F97316; }
-.flame-red { color: #EF4444; }
-.flame-purple { color: #8B5CF6; }
+.flame-orange {
+  color: #F97316;
+}
+
+.flame-red {
+  color: #EF4444;
+}
+
+.flame-purple {
+  color: #8B5CF6;
+}
 
 /* Timer styles */
 .timer-ring {
@@ -198,7 +264,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Progress bar animation */
 @keyframes progress-fill {
-  from { width: 0%; }
+  from {
+    width: 0%;
+  }
 }
 
 .progress-animated {
@@ -217,7 +285,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Gradient text */
@@ -241,6 +311,64 @@ h1, h2, h3, h4, h5, h6 {
 /* Landing page hero gradient */
 .hero-gradient {
   @apply bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500;
+}
+
+/* Animated gradient background */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient-bg {
+  background: linear-gradient(-45deg,
+      hsl(var(--background)),
+      hsl(240 10% 8%),
+      hsl(260 15% 10%),
+      hsl(220 12% 8%),
+      hsl(var(--background)));
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* Subtle aurora effect for dark mode */
+.dark .aurora-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.dark .aurora-bg::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+  animation: aurora-move 20s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes aurora-move {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(2%, 2%) rotate(3deg);
+  }
 }
 
 /* Mobile bottom navigation */

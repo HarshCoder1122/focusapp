@@ -2,12 +2,12 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { 
-  Clock, 
-  Coins, 
-  Flame, 
-  Target, 
-  Shield, 
+import {
+  Clock,
+  Coins,
+  Flame,
+  Target,
+  Shield,
   Trophy,
   ChevronRight,
   Sparkles,
@@ -63,18 +63,18 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-8 h-8 text-primary" />
-              <span className="text-xl font-bold tracking-tight">RevealIQ</span>
+              <img src="/logo192.png" alt="StudyCompanion" className="w-10 h-10" />
+              <span className="text-xl font-bold tracking-tight">StudyCompanion</span>
             </div>
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => navigate("/auth")}
                 data-testid="nav-login-btn"
               >
                 Login
               </Button>
-              <Button 
+              <Button
                 onClick={() => navigate("/auth")}
                 className="btn-primary"
                 data-testid="nav-signup-btn"
@@ -107,12 +107,12 @@ const LandingPage = () => {
                 Stay Consistent.
               </h1>
               <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-lg">
-                Build discipline, track your progress, and earn coins for every focused minute. 
+                Build discipline, track your progress, and earn coins for every focused minute.
                 The ultimate motivation system for serious students.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   onClick={() => navigate("/auth")}
                   className="btn-primary text-lg"
                   data-testid="hero-cta-btn"
@@ -120,8 +120,8 @@ const LandingPage = () => {
                   Start Earning Free
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   variant="outline"
                   className="btn-secondary"
                   onClick={() => document.getElementById("features").scrollIntoView({ behavior: "smooth" })}
@@ -138,13 +138,13 @@ const LandingPage = () => {
               className="relative"
             >
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <img 
+                <img
                   src="https://images.pexels.com/photos/9159088/pexels-photo-9159088.jpeg"
                   alt="Student studying with focus"
                   className="w-full h-[400px] object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-                
+
                 {/* Floating Stats Cards */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -239,7 +239,7 @@ const LandingPage = () => {
                 <span className="gradient-text">Unlock Rewards</span>
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Every focused minute counts. Complete study sessions, maintain streaks, 
+                Every focused minute counts. Complete study sessions, maintain streaks,
                 and hit your daily goals to earn coins and unlock amazing rewards.
               </p>
 
@@ -310,11 +310,11 @@ const LandingPage = () => {
               Ready to Build Better Study Habits?
             </h2>
             <p className="text-lg opacity-90 mb-8 max-w-2xl mx-auto">
-              Join thousands of students who are earning rewards while building discipline. 
+              Join thousands of students who are earning rewards while building discipline.
               It's completely free to start!
             </p>
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               onClick={() => navigate("/auth")}
               className="bg-white text-primary hover:bg-white/90 rounded-full px-8 py-3 font-bold text-lg"
               data-testid="cta-signup-btn"

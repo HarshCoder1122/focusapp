@@ -17,10 +17,9 @@ const AuthPage = () => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({ name: "", email: "", password: "" });
 
-  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+  // Placeholder for future Supabase Google Auth
   const handleGoogleAuth = () => {
-    const redirectUrl = window.location.origin + "/dashboard";
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    toast.info("Please sign up with email/password. Google Auth requires additional Supabase setup.");
   };
 
   const handleLogin = async (e) => {

@@ -27,8 +27,10 @@ export const ThemeProvider = ({ children }) => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
+  const isDark = theme === "dark";
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, isDark }}>
       {children}
     </ThemeContext.Provider>
   );
