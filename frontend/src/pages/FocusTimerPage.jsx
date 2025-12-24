@@ -33,8 +33,18 @@ import {
     Flame,
     CheckCircle2,
     RotateCcw,
-    ArrowLeft
+    ArrowLeft,
+    Bell,
+    Sparkles
 } from "lucide-react";
+import {
+    getRandomQuote,
+    getNextCheckInterval,
+    playNotificationSound,
+    triggerVibration,
+    getCoinPenaltyMultiplier,
+    VERIFICATION_TIMEOUT_MS
+} from "@/utils/focusVerification";
 
 const DURATIONS = [
     { label: "25 min", value: 25, coins: 20 },
@@ -58,14 +68,23 @@ const FocusTimerPage = ({ user }) => {
     const [focusScore, setFocusScore] = useState(100);
     const [wasInterrupted, setWasInterrupted] = useState(false);
 
+    // Focus verification state
+    const [showVerification, setShowVerification] = useState(false);
+    const [currentQuote, setCurrentQuote] = useState(null);
+    const [missedChecks, setMissedChecks] = useState(0);
+    const [checkCount, setCheckCount] = useState(0);
+    const [verificationTimeLeft, setVerificationTimeLeft] = useState(30);
+
     // Session result
     const [showResult, setShowResult] = useState(false);
     const [sessionResult, setSessionResult] = useState(null);
 
     const timerRef = useRef(null);
     const startTimeRef = useRef(null);
+    const verificationTimerRef = useRef(null);
+    const verificationTimeoutRef = useRef(null);
 
-    // Calculate predicted coins
+    // Calculate predicted coins with verification penalty
     const getPredictedCoins = useCallback(() => {
         const durationInfo = DURATIONS.find(d => d.value === selectedDuration);
         if (!durationInfo) return 0;
@@ -78,8 +97,11 @@ const FocusTimerPage = ({ user }) => {
             coins = Math.round(coins * 0.7);
         }
 
+        // Apply verification penalty
+        coins = Math.round(coins * getCoinPenaltyMultiplier(missedChecks));
+
         return Math.max(0, coins);
-    }, [selectedDuration, focusScore, wasInterrupted]);
+    }, [selectedDuration, focusScore, wasInterrupted, missedChecks]);
 
     // Anti-cheat: Track visibility changes
     useEffect(() => {
@@ -111,6 +133,67 @@ const FocusTimerPage = ({ user }) => {
         };
     }, [isRunning, isPaused]);
 
+    // Focus verification scheduling
+    useEffect(() => {
+        if (!isRunning || isPaused || showVerification) {
+            clearTimeout(verificationTimerRef.current);
+            return;
+        }
+
+        const elapsedMinutes = Math.floor((selectedDuration * 60 - timeRemaining) / 60);
+        const nextInterval = getNextCheckInterval(selectedDuration, elapsedMinutes, checkCount);
+
+        if (nextInterval > 0) {
+            // Schedule next verification check
+            verificationTimerRef.current = setTimeout(() => {
+                triggerVerification();
+            }, nextInterval * 1000);
+        }
+
+        return () => clearTimeout(verificationTimerRef.current);
+    }, [isRunning, isPaused, checkCount, selectedDuration]);
+
+    // Trigger verification popup
+    const triggerVerification = () => {
+        playNotificationSound();
+        triggerVibration();
+        setCurrentQuote(getRandomQuote());
+        setShowVerification(true);
+        setVerificationTimeLeft(30);
+        setCheckCount(prev => prev + 1);
+
+        // Start countdown timer
+        let countdown = 30;
+        verificationTimeoutRef.current = setInterval(() => {
+            countdown--;
+            setVerificationTimeLeft(countdown);
+
+            if (countdown <= 0) {
+                handleVerificationTimeout();
+            }
+        }, 1000);
+    };
+
+    // Handle verification timeout (missed check)
+    const handleVerificationTimeout = () => {
+        clearInterval(verificationTimeoutRef.current);
+        setShowVerification(false);
+        setMissedChecks(prev => prev + 1);
+        setFocusScore(prev => Math.max(0, prev - 15));
+        toast.error("Focus check missed! Coin penalty applied.", {
+            icon: <AlertTriangle className="w-4 h-4" />
+        });
+    };
+
+    // Handle verification confirmation
+    const handleVerificationConfirm = () => {
+        clearInterval(verificationTimeoutRef.current);
+        setShowVerification(false);
+        toast.success("Great! Keep up the focus! 💪", {
+            icon: <CheckCircle2 className="w-4 h-4" />
+        });
+    };
+
     // Timer countdown
     useEffect(() => {
         if (isRunning && !isPaused && timeRemaining > 0) {
@@ -139,6 +222,11 @@ const FocusTimerPage = ({ user }) => {
         setInterruptions(0);
         setFocusScore(100);
         setWasInterrupted(false);
+        // Reset verification state
+        setMissedChecks(0);
+        setCheckCount(0);
+        setShowVerification(false);
+        clearInterval(verificationTimeoutRef.current);
         toast.success("Focus session started! Stay focused 💪");
     };
 
@@ -208,6 +296,9 @@ const FocusTimerPage = ({ user }) => {
         setInterruptions(0);
         setFocusScore(100);
         setWasInterrupted(false);
+        // Reset verification state
+        setMissedChecks(0);
+        setCheckCount(0);
     };
 
     const formatTime = (seconds) => {
@@ -390,6 +481,12 @@ const FocusTimerPage = ({ user }) => {
                                     <span>{interruptions} interruption{interruptions > 1 ? "s" : ""} detected</span>
                                 </div>
                             )}
+                            {missedChecks > 0 && (
+                                <div className="flex items-center gap-2 mt-2 text-accent text-sm">
+                                    <Bell className="w-4 h-4" />
+                                    <span>{missedChecks} focus check{missedChecks > 1 ? "s" : ""} missed ({Math.round(getCoinPenaltyMultiplier(missedChecks) * 100)}% coins)</span>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -459,6 +556,58 @@ const FocusTimerPage = ({ user }) => {
                             </div>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Focus Verification Popup */}
+            <Dialog open={showVerification} onOpenChange={() => { }}>
+                <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Bell className="w-6 h-6 text-primary animate-bounce" />
+                            Focus Check!
+                        </DialogTitle>
+                        <DialogDescription>
+                            Are you still studying? Confirm to continue.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-6 py-4">
+                        {/* Motivational Quote */}
+                        {currentQuote && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-gradient-to-br from-primary/10 via-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-primary/20"
+                            >
+                                <Sparkles className="w-5 h-5 text-primary mb-2" />
+                                <p className="text-sm italic">"{currentQuote.quote}"</p>
+                                <p className="text-xs text-muted-foreground mt-2">— {currentQuote.author}</p>
+                            </motion.div>
+                        )}
+
+                        {/* Countdown Timer */}
+                        <div className="text-center">
+                            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-4 ${verificationTimeLeft > 15 ? "border-primary" :
+                                verificationTimeLeft > 5 ? "border-accent" : "border-destructive"
+                                }`}>
+                                <span className={`text-2xl font-bold font-mono ${verificationTimeLeft <= 5 ? "text-destructive animate-pulse" : ""
+                                    }`}>
+                                    {verificationTimeLeft}
+                                </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">seconds to respond</p>
+                        </div>
+
+                        {/* Confirm Button */}
+                        <Button
+                            onClick={handleVerificationConfirm}
+                            className="w-full btn-primary text-lg py-6"
+                        >
+                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                            Yes, I'm Studying! 📚
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
