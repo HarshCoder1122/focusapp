@@ -2,8 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install build dependencies for packages that require compilation
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libffi-dev \
+    cargo \
+    rustc \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
