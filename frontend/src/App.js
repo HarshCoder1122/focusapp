@@ -75,11 +75,58 @@ const ProtectedRoute = ({ children }) => {
 // App Router with OAuth callback detection
 function AppRouter() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const hasChecked = useRef(false);
+
+  // Check auth status on app launch for smart redirect
+  useEffect(() => {
+    if (hasChecked.current) return;
+    hasChecked.current = true;
+
+    const checkAuthOnLaunch = async () => {
+      // Only check if on landing page
+      if (location.pathname !== "/") {
+        setCheckingAuth(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(`${API}/auth/me`);
+        if (response.data) {
+          setIsAuthenticated(true);
+          // Redirect to dashboard or onboarding based on user status
+          if (response.data.onboarding_completed) {
+            navigate("/dashboard", { state: { user: response.data }, replace: true });
+          } else {
+            navigate("/onboarding", { state: { user: response.data }, replace: true });
+          }
+        }
+      } catch (error) {
+        // Not authenticated, stay on landing page
+        setIsAuthenticated(false);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuthOnLaunch();
+  }, [location.pathname, navigate]);
 
   // Check URL fragment for OAuth tokens (Supabase returns access_token)
   // This must be synchronous during render to prevent race conditions
   if (location.hash?.includes("access_token=") || location.hash?.includes("session_id=")) {
     return <AuthCallback />;
+  }
+
+  // Show loading while checking auth on landing page
+  if (checkingAuth && location.pathname === "/") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="spinner" />
+      </div>
+    );
   }
 
   return (
