@@ -996,8 +996,14 @@ async def send_motivation_notification(user: dict = Depends(get_current_user)):
 # Include router and cors
 app.include_router(api_router)
 
-# CORS
-origins = ["http://localhost:3000", "http://localhost:3001", "https://your-production-app.com"]
+# CORS - Allow frontend origins
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://studycompanion-two.vercel.app",
+    "https://studycompanion.vercel.app",
+    "https://studycompanion-bckejstvk-harsh-vardhans-projects-688a35a0.vercel.app",
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
