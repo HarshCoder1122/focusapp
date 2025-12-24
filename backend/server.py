@@ -307,20 +307,34 @@ async def google_oauth_callback(data: GoogleCallbackData, response: Response):
         if not data.access_token:
             raise HTTPException(status_code=400, detail="No access token provided")
         
-        # Verify the access token with Supabase using ANON client
-        # OAuth tokens from browser are signed for anon key, not service key
+        # For OAuth tokens, we need to set the session first, then get the user
+        # This is the correct approach for the Supabase Python library
         try:
-            user_response = get_supabase_anon().auth.get_user(data.access_token)
+            # Get the anon client
+            anon_client = get_supabase_anon()
+            
+            # Set the session using the tokens from the OAuth callback
+            # refresh_token might be None but that's okay for verification
+            session_response = anon_client.auth.set_session(
+                access_token=data.access_token,
+                refresh_token=data.refresh_token or ""
+            )
+            
+            if not session_response or not session_response.user:
+                raise HTTPException(status_code=401, detail="Invalid session - could not set session")
+            
+            user_response_user = session_response.user
+            
         except Exception as auth_error:
-            print(f"Supabase auth.get_user error: {type(auth_error).__name__}: {auth_error}")
+            print(f"Supabase set_session error: {type(auth_error).__name__}: {auth_error}")
             raise HTTPException(status_code=401, detail=f"Token verification failed: {str(auth_error)}")
         
-        if not user_response.user:
+        if not user_response_user:
             raise HTTPException(status_code=401, detail="Invalid access token - no user returned")
         
-        user_id = user_response.user.id
-        user_email = user_response.user.email
-        user_name = user_response.user.user_metadata.get("full_name") or user_response.user.user_metadata.get("name") or "Student"
+        user_id = user_response_user.id
+        user_email = user_response_user.email
+        user_name = user_response_user.user_metadata.get("full_name") or user_response_user.user_metadata.get("name") or "Student"
         
         print(f"OAuth user verified: {user_email}")
         
