@@ -149,23 +149,38 @@ async def get_current_user(request: Request) -> dict:
         user_email = user_response.user.email
         
         # Fetch detailed user profile from 'users' table
-        profile_response = get_supabase().table("users").select("*").eq("user_id", user_id).single().execute()
+        # Don't use .single() here as it raises exception if not found, preventing our fallback
+        profile_response = get_supabase().table("users").select("*").eq("user_id", user_id).execute()
         
-        if profile_response.data:
-            return profile_response.data
+        if profile_response.data and len(profile_response.data) > 0:
+            return profile_response.data[0]
         else:
             # User might have different user_id (OAuth vs email/password) - try by email
+            print(f"User {user_id} not found by ID, trying email: {user_email}")
             if user_email:
-                email_profile = get_supabase().table("users").select("*").eq("email", user_email).single().execute()
-                if email_profile.data:
-                    return email_profile.data
+                email_profile = get_supabase().table("users").select("*").eq("email", user_email).execute()
+                if email_profile.data and len(email_profile.data) > 0:
+                    user_data = email_profile.data[0]
+                    # Auto-heal: Update the user_id to match the current OAuth token
+                    # This fixes future lookups
+                    try:
+                        print(f"Auto-healing user {user_email}: updating user_id from {user_data['user_id']} to {user_id}")
+                        get_supabase().table("users").update({"user_id": user_id}).eq("email", user_email).execute()
+                        user_data["user_id"] = user_id
+                    except Exception as heal_error:
+                        print(f"Auto-heal failed (non-critical): {heal_error}")
+                    
+                    return user_data
+                    
+            print(f"User profile not found for ID {user_id} or email {user_email}")
             raise HTTPException(status_code=404, detail="User profile not found")
             
     except HTTPException:
         raise
     except Exception as e:
         print(f"Auth error: {e}")
-        raise HTTPException(status_code=401, detail="Session expired or invalid")
+        # Only return 401 if it's not a 404 from above
+        raise HTTPException(status_code=401, detail=f"Session invalid: {str(e)}")
 
 # ==================== COIN CALCULATION ====================
 
