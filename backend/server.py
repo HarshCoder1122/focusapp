@@ -301,16 +301,28 @@ class GoogleCallbackData(BaseModel):
 @api_router.post("/auth/google/callback")
 async def google_oauth_callback(data: GoogleCallbackData, response: Response):
     try:
+        # Log incoming token info for debugging (not the actual token)
+        print(f"OAuth callback received - token length: {len(data.access_token) if data.access_token else 0}")
+        
+        if not data.access_token:
+            raise HTTPException(status_code=400, detail="No access token provided")
+        
         # Verify the access token with Supabase using ANON client
         # OAuth tokens from browser are signed for anon key, not service key
-        user_response = get_supabase_anon().auth.get_user(data.access_token)
+        try:
+            user_response = get_supabase_anon().auth.get_user(data.access_token)
+        except Exception as auth_error:
+            print(f"Supabase auth.get_user error: {type(auth_error).__name__}: {auth_error}")
+            raise HTTPException(status_code=401, detail=f"Token verification failed: {str(auth_error)}")
         
         if not user_response.user:
-            raise HTTPException(status_code=401, detail="Invalid access token")
+            raise HTTPException(status_code=401, detail="Invalid access token - no user returned")
         
         user_id = user_response.user.id
         user_email = user_response.user.email
         user_name = user_response.user.user_metadata.get("full_name") or user_response.user.user_metadata.get("name") or "Student"
+        
+        print(f"OAuth user verified: {user_email}")
         
         # Check if user profile exists
         profile_response = get_supabase().table("users").select("*").eq("user_id", user_id).execute()
@@ -346,8 +358,10 @@ async def google_oauth_callback(data: GoogleCallbackData, response: Response):
         
         return {"user": user_profile, "token": data.access_token}
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Google OAuth callback error: {e}")
+        print(f"Google OAuth callback unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 # ==================== ONBOARDING ====================

@@ -24,6 +24,11 @@ const AuthCallback = () => {
         // Legacy support for session_id
         const sessionId = params.get("session_id");
 
+        // Debug logging
+        console.log("OAuth callback - hash length:", hash.length);
+        console.log("OAuth callback - access_token present:", !!accessToken);
+        console.log("OAuth callback - access_token length:", accessToken?.length || 0);
+
         if (!accessToken && !sessionId) {
           console.error("No access token or session_id found in callback");
           navigate("/auth");
