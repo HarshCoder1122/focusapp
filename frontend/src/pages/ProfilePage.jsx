@@ -11,6 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -21,6 +30,9 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
     ArrowLeft,
@@ -37,7 +49,10 @@ import {
     Mail,
     Trophy,
     Bell,
-    BellOff
+    BellOff,
+    Pencil,
+    Plus,
+    X
 } from "lucide-react";
 
 const ProfilePage = ({ user, setUser }) => {
@@ -47,6 +62,18 @@ const ProfilePage = ({ user, setUser }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [notificationLoading, setNotificationLoading] = useState(false);
+
+    // Edit Subjects State
+    const [isEditingSubjects, setIsEditingSubjects] = useState(false);
+    const [editingSubjects, setEditingSubjects] = useState([]);
+    const [newSubject, setNewSubject] = useState("");
+
+    // Initialize subjects when user data loads or dialog opens
+    useEffect(() => {
+        if (user?.subjects) {
+            setEditingSubjects(user.subjects);
+        }
+    }, [user, isEditingSubjects]);
 
     // Check notification permission on mount
     useEffect(() => {
@@ -61,6 +88,48 @@ const ProfilePage = ({ user, setUser }) => {
         if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
         if (hours > 0) return `${hours}h`;
         return `${mins}m`;
+    };
+
+    const toggleSubjectRaw = (subject) => {
+        setEditingSubjects(prev =>
+            prev.includes(subject)
+                ? prev.filter(s => s !== subject)
+                : [...prev, subject]
+        );
+    };
+
+    const addCustomSubjectRaw = () => {
+        const trimmed = newSubject.trim();
+        if (trimmed && !editingSubjects.includes(trimmed)) {
+            setEditingSubjects(prev => [...prev, trimmed]);
+            setNewSubject("");
+        } else if (editingSubjects.includes(trimmed)) {
+            toast.error("Subject already added");
+        }
+    };
+
+    const saveSubjects = async () => {
+        if (editingSubjects.length === 0) {
+            toast.error("Please select at least one subject");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await axios.patch(`${API}/user/settings`, {
+                subjects: editingSubjects
+            });
+
+            // Update local user state
+            setUser(prev => ({ ...prev, subjects: editingSubjects }));
+            setIsEditingSubjects(false);
+            toast.success("Subjects updated successfully!");
+        } catch (error) {
+            console.error("Failed to save subjects:", error);
+            toast.error("Failed to update subjects");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDailyTargetChange = async (value) => {
@@ -249,31 +318,116 @@ const ProfilePage = ({ user, setUser }) => {
                 </motion.div>
 
                 {/* Subjects */}
-                {user?.subjects?.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                    >
-                        <Card className="bento-card">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <BookOpen className="w-5 h-5" />
-                                    Your Subjects
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-wrap gap-2">
-                                    {user.subjects.map((subject, index) => (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                >
+                    <Card className="bento-card">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <BookOpen className="w-5 h-5" />
+                                Your Subjects
+                            </CardTitle>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setIsEditingSubjects(true)}>
+                                <Pencil className="w-4 h-4" />
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-wrap gap-2">
+                                {user?.subjects?.length > 0 ? (
+                                    user.subjects.map((subject, index) => (
                                         <Badge key={index} variant="secondary" className="px-3 py-1">
                                             {subject}
                                         </Badge>
-                                    ))}
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No subjects selected</p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Edit Subjects Dialog */}
+                <Dialog open={isEditingSubjects} onOpenChange={setIsEditingSubjects}>
+                    <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>Edit Subjects</DialogTitle>
+                            <DialogDescription>
+                                Manage the subjects you want to track.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-3 max-h-[250px] overflow-y-auto pr-2">
+                                {[
+                                    "Mathematics", "Physics", "Chemistry", "Biology",
+                                    "English", "History", "Geography", "Computer Science",
+                                    "Economics", "Accounts", "Business Studies", "Hindi",
+                                    "Political Science", "Psychology", "Sociology"
+                                ].map((subject) => (
+                                    <div
+                                        key={subject}
+                                        className={`flex items-center space-x-3 p-3 rounded-xl border cursor-pointer transition-all ${editingSubjects.includes(subject)
+                                            ? "border-primary bg-primary/10"
+                                            : "border-border hover:border-primary/50"
+                                            }`}
+                                        onClick={() => toggleSubjectRaw(subject)}
+                                    >
+                                        <Checkbox
+                                            checked={editingSubjects.includes(subject)}
+                                            onCheckedChange={() => toggleSubjectRaw(subject)}
+                                        />
+                                        <span className="text-sm font-medium">{subject}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Custom Subjects</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Add custom subject..."
+                                        value={newSubject}
+                                        onChange={(e) => setNewSubject(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && addCustomSubjectRaw()}
+                                    />
+                                    <Button size="icon" variant="outline" onClick={addCustomSubjectRaw} disabled={!newSubject.trim()}>
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {editingSubjects
+                                        .filter(s => ![
+                                            "Mathematics", "Physics", "Chemistry", "Biology",
+                                            "English", "History", "Geography", "Computer Science",
+                                            "Economics", "Accounts", "Business Studies", "Hindi",
+                                            "Political Science", "Psychology", "Sociology"
+                                        ].includes(s))
+                                        .map((subject, idx) => (
+                                            <Badge key={idx} variant="outline" className="flex items-center gap-1 pl-3 pr-1 py-1">
+                                                {subject}
+                                                <button
+                                                    onClick={() => toggleSubjectRaw(subject)}
+                                                    className="hover:text-destructive p-1 rounded-full transition-colors"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsEditingSubjects(false)}>Cancel</Button>
+                            <Button onClick={saveSubjects} disabled={isSaving}>
+                                {isSaving ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 {/* Settings */}
                 <motion.div
