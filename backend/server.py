@@ -127,12 +127,16 @@ class AITipResponse(BaseModel):
 async def get_current_user(request: Request) -> dict:
     # Check cookies first, then Authorization header
     token = request.cookies.get("sb_access_token")
+    print(f"get_current_user - cookie token present: {bool(token)}, cookies: {list(request.cookies.keys())}")
+    
     if not token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
+            print(f"get_current_user - using Authorization header token")
     
     if not token:
+        print("get_current_user - no token found, returning 401")
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     try:
