@@ -31,6 +31,19 @@ def get_supabase():
         supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY or SUPABASE_KEY)
     return supabase
 
+# Separate client with anon key for OAuth token verification
+# OAuth tokens from the browser are signed for the anon key, not service key
+supabase_anon = None
+
+def get_supabase_anon():
+    global supabase_anon
+    if supabase_anon is None:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            raise HTTPException(status_code=500, detail="Database not configured")
+        from supabase import create_client, Client
+        supabase_anon = create_client(SUPABASE_URL, SUPABASE_KEY)
+    return supabase_anon
+
 # Gemini Config - lazy initialization
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 gemini_model = None
@@ -288,8 +301,9 @@ class GoogleCallbackData(BaseModel):
 @api_router.post("/auth/google/callback")
 async def google_oauth_callback(data: GoogleCallbackData, response: Response):
     try:
-        # Verify the access token with Supabase
-        user_response = get_supabase().auth.get_user(data.access_token)
+        # Verify the access token with Supabase using ANON client
+        # OAuth tokens from browser are signed for anon key, not service key
+        user_response = get_supabase_anon().auth.get_user(data.access_token)
         
         if not user_response.user:
             raise HTTPException(status_code=401, detail="Invalid access token")
