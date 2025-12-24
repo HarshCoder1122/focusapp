@@ -72,13 +72,13 @@ const ProtectedRoute = ({ children }) => {
   return React.cloneElement(children, { user, setUser });
 };
 
-// App Router with session_id detection
+// App Router with OAuth callback detection
 function AppRouter() {
   const location = useLocation();
 
-  // Check URL fragment for session_id (Google OAuth callback)
+  // Check URL fragment for OAuth tokens (Supabase returns access_token)
   // This must be synchronous during render to prevent race conditions
-  if (location.hash?.includes("session_id=")) {
+  if (location.hash?.includes("access_token=") || location.hash?.includes("session_id=")) {
     return <AuthCallback />;
   }
 
