@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { API } from "@/App";
 import BottomNav from "@/components/BottomNav";
 import AIThinking from "@/components/AIThinking";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -277,9 +278,7 @@ const PlannerPage = ({ user }) => {
                                 <AIThinking message="RevealIQ AI is analyzing your study patterns..." />
                             ) : aiPlan ? (
                                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                                        {aiPlan.plan}
-                                    </div>
+                                    <MarkdownRenderer content={aiPlan.plan} />
                                     {aiPlan.context && (
                                         <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
                                             <span className="text-xs bg-purple-500/10 text-purple-500 px-2 py-1 rounded-full">
@@ -331,9 +330,7 @@ const PlannerPage = ({ user }) => {
                                 <AIThinking message="Analyzing your progress..." />
                             ) : progressInsights ? (
                                 <div>
-                                    <div className="whitespace-pre-wrap text-sm leading-relaxed mb-4">
-                                        {progressInsights.insights}
-                                    </div>
+                                    <MarkdownRenderer content={progressInsights.insights} className="mb-4" />
                                     {progressInsights.stats && (
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-border">
                                             <div className="text-center p-2 bg-secondary rounded-lg">
