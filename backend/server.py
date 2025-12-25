@@ -85,6 +85,7 @@ class StudySessionCreate(BaseModel):
     focus_score: float
     was_interrupted: bool = False
     interruption_count: int = 0
+    missed_checks: int = 0  # Number of missed focus verification checks
 
 class StudySessionResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -184,7 +185,7 @@ async def get_current_user(request: Request) -> dict:
 
 # ==================== COIN CALCULATION ====================
 
-def calculate_coins(duration_minutes: int, focus_score: float, was_interrupted: bool) -> int:
+def calculate_coins(duration_minutes: int, focus_score: float, was_interrupted: bool, missed_checks: int = 0) -> int:
     base_coins = 0
     if duration_minutes >= 25: base_coins = 20
     if duration_minutes >= 50: base_coins = 50
@@ -195,6 +196,15 @@ def calculate_coins(duration_minutes: int, focus_score: float, was_interrupted: 
     
     if was_interrupted:
         coins = int(coins * 0.7)
+    
+    # Apply verification penalty based on missed checks
+    # 0 missed = 100%, 1 missed = 85%, 2 missed = 70%, 3+ missed = 50%
+    if missed_checks == 1:
+        coins = int(coins * 0.85)
+    elif missed_checks == 2:
+        coins = int(coins * 0.70)
+    elif missed_checks >= 3:
+        coins = int(coins * 0.50)
     
     return max(coins, 0)
 
@@ -471,7 +481,8 @@ async def create_study_session(session_data: StudySessionCreate, user: dict = De
     coins_earned = calculate_coins(
         session_data.duration_minutes,
         session_data.focus_score,
-        session_data.was_interrupted
+        session_data.was_interrupted,
+        session_data.missed_checks
     )
     
     session_id = str(uuid.uuid4())
@@ -762,15 +773,20 @@ async def get_ai_tip(request: AITipRequest, user: dict = Depends(get_current_use
         return AITipResponse(tip="Stay consistent! Add GEMINI_API_KEY to enable AI tips.", category="system")
     
     prompts = {
-        "general": f"Brief study tip for student with {user.get('current_streak', 0)} day streak.",
-        "motivation": f"Motivate a student who has {user.get('coins', 0)} coins.",
-        "study_tip": "One short effective study technique."
+        "general": f"Give a brief, friendly study tip for a student with a {user.get('current_streak', 0)} day streak. Keep it to 1-2 sentences, plain text only, no markdown, no asterisks, no formatting.",
+        "motivation": f"Give a short motivational message for a student who has earned {user.get('coins', 0)} study coins. Keep it to 1-2 sentences, plain text only, no markdown.",
+        "study_tip": "Share one short, effective study technique in 1-2 sentences. Plain text only, no markdown, no asterisks."
     }
     
     try:
         prompt = prompts.get(request.context, prompts["general"])
         response = get_gemini_model().generate_content(prompt)
         text = response.text.strip()
+        
+        # Remove any markdown formatting that might slip through
+        text = text.replace("**", "").replace("*", "").replace("##", "").replace("#", "")
+        text = text.replace("```", "").replace("`", "")
+        
         # Ensure it's not too long
         if len(text) > 200: text = text[:200] + "..."
         return AITipResponse(tip=text, category=request.context)

@@ -251,15 +251,22 @@ const DashboardPage = ({ user, setUser }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
                     >
-                        <Card className="bento-card bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-orange-500/10">
+                        <Card className="bento-card bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-orange-500/10 border-primary/20">
                             <CardContent className="pt-6">
                                 <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                                        <Sparkles className="w-5 h-5 text-primary" />
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0 shadow-lg">
+                                        <Sparkles className="w-5 h-5 text-white" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold mb-1">Daily Tip</h3>
-                                        <p className="text-sm text-muted-foreground">{tip}</p>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <h3 className="font-bold">Daily Tip</h3>
+                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+                                                AI Powered
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground italic leading-relaxed">
+                                            "{tip}"
+                                        </p>
                                     </div>
                                 </div>
                             </CardContent>

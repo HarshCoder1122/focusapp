@@ -42,8 +42,27 @@ export const getRandomQuote = () => {
  * @returns {number} - Seconds until next check, or -1 if no more checks needed
  */
 export const getNextCheckInterval = (sessionDuration, elapsedMinutes, checkCount) => {
-    // No checks for sessions under 30 minutes
-    if (sessionDuration < 30) return -1;
+    // Special handling for 25-minute sessions: 1 check around 10-15 minutes
+    if (sessionDuration === 25) {
+        // Only 1 check for 25-minute sessions
+        if (checkCount >= 1) return -1;
+
+        // Schedule check around 10-15 minutes into the session
+        // Random offset between 10-15 minutes from start
+        const targetMinute = 10 + Math.floor(Math.random() * 6); // 10-15 minutes
+
+        // If we haven't reached the target time yet, schedule it
+        if (elapsedMinutes < targetMinute) {
+            const waitMinutes = targetMinute - elapsedMinutes;
+            // Don't schedule if less than 8 minutes remaining after check
+            if (sessionDuration - targetMinute < 8) return -1;
+            return waitMinutes * 60; // Return in seconds
+        }
+        return -1; // Already past the check time
+    }
+
+    // No checks for sessions under 25 minutes
+    if (sessionDuration < 25) return -1;
 
     // Base interval: ~15 minutes
     const baseInterval = 15;

@@ -367,7 +367,8 @@ const FocusTimerPage = ({ user }) => {
                 duration_minutes: durationMinutes,
                 focus_score: focusScore,
                 was_interrupted: wasInterrupted,
-                interruption_count: interruptions
+                interruption_count: interruptions,
+                missed_checks: missedChecks  // Send missed checks for accurate coin calculation
             });
 
             setSessionResult({
