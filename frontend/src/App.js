@@ -4,6 +4,7 @@ import axios from "axios";
 import "@/App.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { initializeStudyReminders, stopStudyReminders } from "@/utils/studyReminder";
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
@@ -19,8 +20,36 @@ import AuthCallback from "@/pages/AuthCallback";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 export const API = `${BACKEND_URL}/api`;
 
+// Token storage key for mobile persistence
+export const AUTH_TOKEN_KEY = "revealiq_auth_token";
+
 // Configure axios defaults
 axios.defaults.withCredentials = true;
+
+// Axios interceptor to add Authorization header from localStorage
+// This ensures mobile devices stay logged in even when cookies don't persist
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Axios response interceptor to handle 401 errors (clear invalid tokens)
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +80,23 @@ const ProtectedRoute = ({ children }) => {
     };
     checkAuth();
   }, [navigate, location.state]);
+
+  // Initialize study reminders when user is authenticated
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      // Check if notifications are enabled for this user
+      const hasNotifications = 'Notification' in window &&
+        Notification.permission === 'granted' &&
+        !!user.push_subscription;
+
+      initializeStudyReminders(hasNotifications);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopStudyReminders();
+    };
+  }, [user, isAuthenticated]);
 
   if (isAuthenticated === null) {
     return (
@@ -86,6 +132,14 @@ function AppRouter() {
     hasChecked.current = true;
 
     const checkAuthOnLaunch = async () => {
+      // CRITICAL: Skip auth check if we have OAuth tokens in the URL hash
+      // This prevents a race condition where we redirect to /auth before 
+      // the AuthCallback component can process the tokens
+      if (location.hash?.includes("access_token=") || location.hash?.includes("session_id=")) {
+        setCheckingAuth(false);
+        return; // Let AuthCallback handle this
+      }
+
       // Only check if on landing page
       if (location.pathname !== "/") {
         setCheckingAuth(false);
@@ -112,7 +166,7 @@ function AppRouter() {
     };
 
     checkAuthOnLaunch();
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, location.hash]);
 
   // Check URL fragment for OAuth tokens (Supabase returns access_token)
   // This must be synchronous during render to prevent race conditions

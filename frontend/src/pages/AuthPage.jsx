@@ -3,12 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { toast } from "sonner";
-import { API } from "@/App";
+import { API, AUTH_TOKEN_KEY } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { BookOpen, Mail, Lock, User, Chrome } from "lucide-react";
 
 const AuthPage = () => {
@@ -16,6 +24,11 @@ const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({ name: "", email: "", password: "" });
+
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
   // Supabase Google OAuth
   const handleGoogleAuth = () => {
@@ -27,6 +40,27 @@ const AuthPage = () => {
     window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
   };
 
+  // Handle forgot password
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await axios.post(`${API}/auth/reset-password`, { email: resetEmail });
+      toast.success("Password reset email sent! Check your inbox.");
+      setShowForgotPassword(false);
+      setResetEmail("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send reset email");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -34,6 +68,10 @@ const AuthPage = () => {
     try {
       const response = await axios.post(`${API}/auth/login`, loginData);
       if (response.data.user) {
+        // Store token for mobile persistence
+        if (response.data.token) {
+          localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
+        }
         toast.success("Welcome back!");
         if (response.data.user.onboarding_completed) {
           navigate("/dashboard", { state: { user: response.data.user } });
@@ -55,6 +93,10 @@ const AuthPage = () => {
     try {
       const response = await axios.post(`${API}/auth/register`, registerData);
       if (response.data.user) {
+        // Store token for mobile persistence
+        if (response.data.token) {
+          localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
+        }
         toast.success("Account created! Let's set up your profile.");
         navigate("/onboarding", { state: { user: response.data.user } });
       }
@@ -154,6 +196,18 @@ const AuthPage = () => {
                   >
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetEmail(loginData.email);
+                        setShowForgotPassword(true);
+                      }}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                 </form>
               </TabsContent>
 
@@ -226,6 +280,48 @@ const AuthPage = () => {
           By continuing, you agree to our Terms of Service and Privacy Policy
         </p>
       </motion.div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  className="pl-10"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowForgotPassword(false)}
+                disabled={isResetting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isResetting}>
+                {isResetting ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

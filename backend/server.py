@@ -319,6 +319,28 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(key="sb_access_token", path="/")
     return {"message": "Logged out successfully"}
 
+# Password reset request
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: PasswordResetRequest):
+    """Send a password reset email via Supabase"""
+    try:
+        # Use Supabase's built-in password reset
+        # This sends an email with a reset link
+        get_supabase().auth.reset_password_email(
+            data.email,
+            options={
+                "redirect_to": f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/auth"
+            }
+        )
+        return {"message": "Password reset email sent"}
+    except Exception as e:
+        print(f"Password reset error: {e}")
+        # Don't reveal if email exists or not for security
+        return {"message": "If an account exists with this email, a reset link will be sent"}
+
 # Google OAuth callback - verify access token and return user
 class GoogleCallbackData(BaseModel):
     access_token: str

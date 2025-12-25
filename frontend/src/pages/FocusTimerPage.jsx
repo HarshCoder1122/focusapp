@@ -52,6 +52,14 @@ const DURATIONS = [
     { label: "90 min", value: 90, coins: 100 },
 ];
 
+// Storage key for persisting timer state
+const TIMER_STORAGE_KEY = "focus-timer-session";
+
+// Grace period for phone lock/unlock/calls (30 seconds)
+// Short switches like phone lock, calls, or quick checks won't trigger anti-cheat
+// Only extended app switches (>30s) are considered cheating
+const VISIBILITY_GRACE_PERIOD_MS = 30000;
+
 const FocusTimerPage = ({ user }) => {
     const navigate = useNavigate();
 
@@ -84,6 +92,10 @@ const FocusTimerPage = ({ user }) => {
     const verificationTimerRef = useRef(null);
     const verificationTimeoutRef = useRef(null);
 
+    // Refs for anti-cheat grace period
+    const hiddenTimestampRef = useRef(null);
+    const gracePeriodTimerRef = useRef(null);
+
     // Calculate predicted coins with verification penalty
     const getPredictedCoins = useCallback(() => {
         const durationInfo = DURATIONS.find(d => d.value === selectedDuration);
@@ -103,33 +115,48 @@ const FocusTimerPage = ({ user }) => {
         return Math.max(0, coins);
     }, [selectedDuration, focusScore, wasInterrupted, missedChecks]);
 
-    // Anti-cheat: Track visibility changes
+    // Anti-cheat: Track visibility changes with grace period for phone lock/unlock
     useEffect(() => {
         const handleVisibilityChange = () => {
-            if (isRunning && !isPaused && document.hidden) {
-                setInterruptions(prev => prev + 1);
-                setWasInterrupted(true);
-                setFocusScore(prev => Math.max(0, prev - 10));
-                toast.warning("Focus interrupted! App switch detected.", {
-                    icon: <AlertTriangle className="w-4 h-4" />
-                });
-            }
-        };
+            if (!isRunning || isPaused) return;
 
-        const handleBlur = () => {
-            if (isRunning && !isPaused) {
-                setInterruptions(prev => prev + 1);
-                setWasInterrupted(true);
-                setFocusScore(prev => Math.max(0, prev - 5));
+            if (document.hidden) {
+                // Screen just became hidden - start grace period timer
+                hiddenTimestampRef.current = Date.now();
+
+                // Set a timer to trigger penalty AFTER grace period
+                gracePeriodTimerRef.current = setTimeout(() => {
+                    // Only penalize if still hidden after grace period
+                    if (document.hidden && isRunning && !isPaused) {
+                        setInterruptions(prev => prev + 1);
+                        setWasInterrupted(true);
+                        setFocusScore(prev => Math.max(0, prev - 10));
+                        toast.warning("Focus interrupted! App switch detected.", {
+                            icon: <AlertTriangle className="w-4 h-4" />
+                        });
+                    }
+                }, VISIBILITY_GRACE_PERIOD_MS);
+            } else {
+                // Screen became visible again - cancel pending penalty
+                clearTimeout(gracePeriodTimerRef.current);
+
+                // Check if user was away longer than grace period
+                if (hiddenTimestampRef.current) {
+                    const hiddenDuration = Date.now() - hiddenTimestampRef.current;
+                    if (hiddenDuration > VISIBILITY_GRACE_PERIOD_MS) {
+                        // Penalty was already applied by the timeout, or will be
+                        // This case is handled by the timeout above
+                    }
+                    hiddenTimestampRef.current = null;
+                }
             }
         };
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
-        window.addEventListener("blur", handleBlur);
 
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange);
-            window.removeEventListener("blur", handleBlur);
+            clearTimeout(gracePeriodTimerRef.current);
         };
     }, [isRunning, isPaused]);
 
@@ -214,6 +241,78 @@ const FocusTimerPage = ({ user }) => {
         return () => clearInterval(timerRef.current);
     }, [isRunning, isPaused]);
 
+    // Persist timer state to localStorage when running
+    useEffect(() => {
+        if (isRunning) {
+            const sessionData = {
+                subject,
+                selectedDuration,
+                timeRemaining,
+                startTime: startTimeRef.current,
+                focusScore,
+                interruptions,
+                wasInterrupted,
+                missedChecks,
+                checkCount,
+                isPaused,
+                savedAt: Date.now()
+            };
+            localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(sessionData));
+        }
+    }, [isRunning, timeRemaining, focusScore, interruptions, isPaused, missedChecks]);
+
+    // Restore timer state from localStorage on mount
+    useEffect(() => {
+        try {
+            const savedSession = localStorage.getItem(TIMER_STORAGE_KEY);
+            if (savedSession) {
+                const data = JSON.parse(savedSession);
+
+                // Check if session is still valid (not too old - max 3 hours)
+                const sessionAge = Date.now() - data.savedAt;
+                const maxAge = 3 * 60 * 60 * 1000; // 3 hours
+
+                if (sessionAge < maxAge && data.timeRemaining > 0) {
+                    // Calculate actual time remaining based on elapsed time since save
+                    const elapsedSinceRefresh = Math.floor((Date.now() - data.savedAt) / 1000);
+                    const adjustedTimeRemaining = data.isPaused
+                        ? data.timeRemaining
+                        : Math.max(0, data.timeRemaining - elapsedSinceRefresh);
+
+                    if (adjustedTimeRemaining > 0) {
+                        setSubject(data.subject);
+                        setSelectedDuration(data.selectedDuration);
+                        setTimeRemaining(adjustedTimeRemaining);
+                        startTimeRef.current = data.startTime;
+                        setFocusScore(data.focusScore);
+                        setInterruptions(data.interruptions);
+                        setWasInterrupted(data.wasInterrupted);
+                        setMissedChecks(data.missedChecks || 0);
+                        setCheckCount(data.checkCount || 0);
+                        setIsPaused(data.isPaused);
+                        setIsRunning(true);
+
+                        toast.info("Focus session restored! Keep going 💪");
+                    } else {
+                        // Session would have completed, clear saved data
+                        localStorage.removeItem(TIMER_STORAGE_KEY);
+                    }
+                } else {
+                    // Session too old or completed, clear saved data
+                    localStorage.removeItem(TIMER_STORAGE_KEY);
+                }
+            }
+        } catch (error) {
+            // If there's any error parsing, just clear the saved data
+            localStorage.removeItem(TIMER_STORAGE_KEY);
+        }
+    }, []); // Only run on mount
+
+    // Clear saved session when session ends
+    const clearSavedSession = useCallback(() => {
+        localStorage.removeItem(TIMER_STORAGE_KEY);
+    }, []);
+
     const handleStart = () => {
         setIsRunning(true);
         setIsPaused(false);
@@ -241,7 +340,9 @@ const FocusTimerPage = ({ user }) => {
     };
 
     const handleStop = () => {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000 / 60);
+        // Calculate elapsed time from the actual timer progress, not startTimeRef
+        // This correctly handles sessions that were restored after a refresh
+        const elapsed = Math.floor((selectedDuration * 60 - timeRemaining) / 60);
         if (elapsed >= 5) {
             // Minimum 5 minutes to earn coins
             submitSession(elapsed);
@@ -250,6 +351,7 @@ const FocusTimerPage = ({ user }) => {
             setIsRunning(false);
             setIsPaused(false);
             setTimeRemaining(selectedDuration * 60);
+            clearSavedSession();
             toast.info("Session cancelled. Study at least 5 minutes to earn coins.");
         }
     };
@@ -286,6 +388,7 @@ const FocusTimerPage = ({ user }) => {
             clearInterval(timerRef.current);
             setIsRunning(false);
             setIsPaused(false);
+            clearSavedSession();
         }
     };
 

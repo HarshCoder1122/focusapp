@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { API } from "@/App";
+import { API, AUTH_TOKEN_KEY } from "@/App";
 import BottomNav from "@/components/BottomNav";
 import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { initializeStudyReminders } from "@/utils/studyReminder";
 import {
     ArrowLeft,
     User,
@@ -199,11 +200,13 @@ const ProfilePage = ({ user, setUser }) => {
                 });
 
                 setNotificationsEnabled(true);
+                initializeStudyReminders(true); // Start automatic reminders
                 toast.success('🔔 Notifications enabled! You\'ll receive study reminders.');
             } else {
                 // Unsubscribe
                 await axios.delete(`${API}/notifications/unsubscribe`);
                 setNotificationsEnabled(false);
+                initializeStudyReminders(false); // Stop automatic reminders
                 toast.success('Notifications disabled');
             }
         } catch (error) {
@@ -216,10 +219,12 @@ const ProfilePage = ({ user, setUser }) => {
 
     const handleLogout = async () => {
         try {
+            // Clear token from localStorage
+            localStorage.removeItem(AUTH_TOKEN_KEY);
             await axios.post(`${API}/auth/logout`);
             navigate("/");
         } catch (error) {
-            // Still navigate away
+            // Still navigate away (token already cleared)
             navigate("/");
         }
     };

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { API } from "@/App";
+import { API, AUTH_TOKEN_KEY } from "@/App";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -51,6 +51,15 @@ const AuthCallback = () => {
         }
 
         if (response?.data?.user) {
+          // Store token in localStorage for mobile persistence
+          // The backend returns the token in the response
+          if (response.data.token) {
+            localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
+          } else if (accessToken) {
+            // Fallback: store the original access token
+            localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+          }
+
           // Clear the hash from URL
           window.history.replaceState(null, "", window.location.pathname);
 
